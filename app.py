@@ -3,78 +3,89 @@ import pandas as pd
 import time
 
 # Конфигурация на страницата
-st.set_page_config(page_title="Класна Анкета", page_icon="🏆", layout="centered")
+st.set_page_config(page_title="Геймърска Анкета", page_icon="🎮", layout="centered")
 
-# Стилизиране с малко CSS за по-готини заглавия
+# Стилизиране
 st.markdown("""
     <style>
-    .main-title { font-size: 50px; font-weight: bold; color: #FF4B4B; text-align: center; }
-    .subtitle { font-size: 20px; text-align: center; color: #555; margin-bottom: 30px; }
+    .main-title { font-size: 45px; font-weight: bold; color: #7D3CFF; text-align: center; }
+    .leader-box { 
+        background-color: #f0f2f6; 
+        padding: 20px; 
+        border-radius: 15px; 
+        border-left: 10px solid #FFD700;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    .game-name { color: #7D3CFF; font-size: 30px; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown('<p class="main-title">🏆 Великата Класна Анкета</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Гласувай за своите фаворити и виж кой води класацията!</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-title">🎮 Коя е най-добрата видео игра?</p>', unsafe_allow_html=True)
 
-# --- Инициализация на данните (с по-смислени имена) ---
-if "people_votes" not in st.session_state:
-    st.session_state.people_votes = {"Адриан": 0, "Сашо": 0, "Ачо": 0, "Синан": 0, "Берко": 0}
+# --- Инициализация на игрите ---
+if "game_votes" not in st.session_state:
+    # Можеш да добавяш или махаш игри от този списък:
+    st.session_state.game_votes = {
+        "Minecraft": 0,
+        "Roblox": 0,
+        "Brawl Stars": 0,
+        "Fortnite": 0,
+        "CS:GO / CS2": 0,
+        "League of Legends": 0,
+        "FIFA / FC24": 0,
+        "GTA V": 0
+    }
 
-if "grade_votes" not in st.session_state:
-    st.session_state.grade_votes = {"Шестица": 0, "Петица": 0, "Четворка": 0, "Тройка": 0, "Двойка": 0}
+# --- Логика за Популярност ---
+# Намираме играта с най-много гласове
+popular_game = max(st.session_state.game_votes, key=st.session_state.game_votes.get)
+max_votes = st.session_state.game_votes[popular_game]
 
-# --- Странично меню (Sidebar) ---
-with st.sidebar:
-    st.header("⚙️ Опции")
-    if st.button("🔄 Нулирай резултатите"):
-        for key in st.session_state.people_votes: st.session_state.people_votes[key] = 0
-        for key in st.session_state.grade_votes: st.session_state.grade_votes[key] = 0
-        st.rerun()
-    st.info("Тази анкета е анонимна. Гласувай смело!")
+# Показваме Лидера най-отгоре, ако има поне един глас
+if max_votes > 0:
+    st.markdown(f"""
+    <div class="leader-box">
+        <p style="font-size: 18px; margin-bottom: 5px;">🔥 В МОМЕНТА НАЙ-ПОПУЛЯРНА Е:</p>
+        <p class="game-name">🏆 {popular_game} 🏆</p>
+        <p style="color: #555;">със събрани {max_votes} гласа</p>
+    </div>
+    """, unsafe_allow_html=True)
+else:
+    st.info("🎯 Бъди първият, който ще гласува за своята любима игра!")
 
 # --- Секция за гласуване ---
-st.subheader("🗳️ Дай своя глас")
-col1, col2 = st.columns(2)
+st.subheader("🕹️ Избери своя фаворит:")
+selected_game = st.selectbox("Избери игра от списъка:", list(st.session_state.game_votes.keys()))
 
-with col1:
-    person = st.radio("👤 Избери човек на деня:", list(st.session_state.people_votes.keys()))
-
-with col2:
-    grade = st.selectbox("📚 Коя оценка ти е на сърце?", list(st.session_state.grade_votes.keys()))
-
-if st.button("🚀 ИЗПРАТИ ГЛАСА СИ"):
-    # Анимация за зареждане
-    with st.spinner('Обработваме твоя глас...'):
+if st.button("🚀 ГЛАСУВАЙ СЕГА"):
+    with st.spinner('Записваме твоя геймърски глас...'):
         time.sleep(0.5)
-        st.session_state.people_votes[person] += 1
-        st.session_state.grade_votes[grade] += 1
+        st.session_state.game_votes[selected_game] += 1
     
-    # Визуални ефекти
     st.balloons()
-    if grade == "Шестица":
-        st.snow() # Сняг за отличниците!
-        st.success(f"Браво! Ти подкрепи {person} и избра най-добрата оценка!")
-    else:
-        st.success(f"Твоят глас за {person} беше записан успешно!")
+    st.success(f"Ти гласува за {selected_game}! Виж как се промени класацията отдолу.")
 
 st.divider()
 
-# --- Секция с резултати ---
-st.subheader("📊 Резултати в реално време")
+# --- Резултати и Графика ---
+st.subheader("📊 Текуща класация на популярността")
 
-res_col1, res_col2 = st.columns(2)
+# Подготовка на данните за графиката
+df_games = pd.DataFrame.from_dict(
+    st.session_state.game_votes, 
+    orient="index", 
+    columns=["Гласове"]
+).sort_values(by="Гласове", ascending=False) # Сортираме ги по популярност
 
-with res_col1:
-    st.write("**👑 Популярност (Хора)**")
-    df_people = pd.DataFrame.from_dict(st.session_state.people_votes, orient="index", columns=["Гласове"])
-    st.bar_chart(df_people, color="#FF4B4B")
+# Показване на графиката
+st.bar_chart(df_games, color="#7D3CFF")
 
-with res_col2:
-    st.write("**📝 Желани оценки**")
-    df_grades = pd.DataFrame.from_dict(st.session_state.grade_votes, orient="index", columns=["Гласове"])
-    st.line_chart(df_grades, color="#29B5E8") # Различен тип графика за разнообразие
-
-# Показване на "Лидер" в момента
-leader = max(st.session_state.people_votes, key=st.session_state.people_votes.get)
-if st.session_state.people_votes[leader] > 0:
-    st.info(f"🔥 В момента лидер на класа е **{leader}**!")
+# Странично меню за нулиране
+with st.sidebar:
+    st.header("Настройки")
+    if st.button("🔄 Нулирай класацията"):
+        for game in st.session_state.game_votes:
+            st.session_state.game_votes[game] = 0
+        st.rerun()
+    st.write("Тази анкета показва коя игра е най-играна в момента.")
